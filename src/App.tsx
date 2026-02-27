@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Home, FileText, Wallet } from "lucide-react" // IMPORTAÇÃO DOS ÍCONES
 import HomeScreen from "./screens/HomeScreen"
 import WalletScreen from "./screens/WalletScreen"
 import DocsScreen from "./screens/DocsScreen"
@@ -17,15 +18,25 @@ export default function App() {
 
       {/* Menu de Navegação Inferior Fixo */}
       <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-4 z-50">
+        
+        {/* BOTÃO INÍCIO */}
         <button onClick={() => setActiveTab("home")} className={`flex flex-col items-center gap-1 ${activeTab === 'home' ? 'text-[#1CC8C8]' : 'text-[#8AAEBB]'}`}>
+          <Home size={24} />
           <span className="text-[10px] font-bold uppercase">Início</span>
         </button>
+
+        {/* BOTÃO DOCS */}
         <button onClick={() => setActiveTab("docs")} className={`flex flex-col items-center gap-1 ${activeTab === 'docs' ? 'text-[#1CC8C8]' : 'text-[#8AAEBB]'}`}>
+          <FileText size={24} />
           <span className="text-[10px] font-bold uppercase">Docs</span>
         </button>
+
+        {/* BOTÃO CARTEIRA */}
         <button onClick={() => setActiveTab("wallet")} className={`flex flex-col items-center gap-1 ${activeTab === 'wallet' ? 'text-[#1CC8C8]' : 'text-[#8AAEBB]'}`}>
+          <Wallet size={24} />
           <span className="text-[10px] font-bold uppercase">Carteira</span>
         </button>
+
       </nav>
     </div>
   )
