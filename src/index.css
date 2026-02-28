@@ -1,0 +1,100 @@
+/* ─── Tailwind v4 Entry Point ────────────────────────────────────────────────
+   Importa o engine do Tailwind. Não precisa de tailwind.config.ts no v4;
+   toda a configuração é feita aqui via @theme e @layer.
+   ─────────────────────────────────────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* ─── Design Tokens Muvv — Paleta Litoral Orgânico ──────────────────────────
+   Aqui você altera as cores do app. Referenciadas como bg-muvv-primary, etc.
+   Primary  60%: #EAEFF2  (Off-White Mist — fundos e superfícies)
+   Secondary 30%: #57A6C1 (Azure Horizon — headers e branding)
+   Accent   10%: #1CC8C8  (Teal Waves — botões de ação e trilhas)
+   Prestige  1%: #DAA520  (Gold — selos e áreas premium)
+   ─────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Cores da paleta Muvv */
+  --color-muvv-primary:   #EAEFF2;
+  --color-muvv-secondary: #57A6C1;
+  --color-muvv-accent:    #1CC8C8;
+  --color-muvv-prestige:  #DAA520;
+  --color-muvv-dark:      #1A2B35;
+  --color-muvv-mid:       #3D6B7D;
+  --color-muvv-muted:     #8AAEBB;
+  --color-muvv-surface:   #FFFFFF;
+
+  /* Cores derivadas para estados */
+  --color-muvv-accent-light:    #EDFCFC;
+  --color-muvv-prestige-light:  #FFF8E7;
+  --color-muvv-mid-light:       #D0E4EC;
+  --color-muvv-border:          #EBF2F5;
+
+  /* Tipografia — Rubik é carregada via Google Fonts no index.html */
+  --font-sans: 'Rubik', system-ui, sans-serif;
+
+  /* Border radius padrão do Design System */
+  --radius-muvv: 1rem;
+}
+
+/* ─── Reset e base global ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* O scroll é gerenciado por cada Screen */
+}
+
+body {
+  font-family: 'Rubik', system-ui, sans-serif;
+  background-color: #EAEFF2;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove seta do input number */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Scrollbar discreta — usada dentro das telas */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #C5D9E2; border-radius: 4px; }
+
+/* ─── Gradientes nomeados ─────────────────────────────────────────────────────
+   Tailwind não cobre gradientes multi-stop com ângulos específicos nestes tokens,
+   então definimos como classes utilitárias reutilizáveis.
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Headers de tela */
+  .bg-gradient-header-blue  { background: linear-gradient(160deg, #57A6C1 0%, #3D6B7D 100%); }
+  .bg-gradient-header-dark  { background: linear-gradient(160deg, #1A2B35 0%, #3D6B7D 100%); }
+  .bg-gradient-profile      { background: linear-gradient(160deg, #57A6C1 0%, #1A2B35 100%); }
+
+  /* Elementos internos */
+  .bg-gradient-road         { background: linear-gradient(90deg, #1CC8C8, #57A6C1); }
+  .bg-gradient-bar-active   { background: linear-gradient(180deg, #1CC8C8, #57A6C1); }
+  .bg-gradient-prestige     { background: linear-gradient(135deg, #FFF8E7, #FFFBF0); }
+  .bg-gradient-accent-light { background: linear-gradient(135deg, #EDFCFC, #F0FCFC); }
+  .bg-gradient-cta          { background: linear-gradient(135deg, #1CC8C8, #57A6C1); }
+  .bg-gradient-wallet       { background: linear-gradient(160deg, #57A6C1 0%, #3D6B7D 100%); }
+
+  /* Sombras contextuais */
+  .shadow-accent    { box-shadow: 0 4px 20px rgba(28, 200, 200, 0.25); }
+  .shadow-prestige  { box-shadow: 0 4px 20px rgba(218, 165, 32, 0.25); }
+  .shadow-card      { box-shadow: 0 2px 16px rgba(87, 166, 193, 0.1); }
+  .shadow-card-sm   { box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04); }
+  .shadow-nav       { box-shadow: 0 -4px 24px rgba(87, 166, 193, 0.1); }
+  .shadow-freight   { box-shadow: 0 8px 40px rgba(26, 43, 53, 0.18); }
+
+  /* Glow para texto de valor líquido */
+  .text-glow-accent { text-shadow: 0 0 32px rgba(28, 200, 200, 0.53); }
+
+  /* Filtro glow SVG */
+  .drop-shadow-teal { filter: drop-shadow(0 4px 24px rgba(28, 200, 200, 0.13)); }
+}
