@@ -80,7 +80,8 @@ export function DocsScreen() {
         {DOCS.map(doc => {
           const isDone   = !!uploaded[doc.id]
           const isGold   = !!doc.isGold
-          const accentColor = isGold ? 'muvv-prestige' : 'muvv-accent'
+          const accentColor = isGold ? 'muvv-prestige' : 'muvv-accent';
+            console.log(accentColor);
 
           return (
             <div
