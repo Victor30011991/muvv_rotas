@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: muvv_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     muvv
+      POSTGRES_PASSWORD: muvv2026
+      POSTGRES_DB:       muvv_rotas
+    ports:
+      - "5432:5432"
+    volumes:
+      - muvv_pgdata:/var/lib/postgresql/data
+
+  # Interface visual para ver o banco (opcional)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: muvv_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    admin@muvv.com
+      PGADMIN_DEFAULT_PASSWORD: muvv2026
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  muvv_pgdata:

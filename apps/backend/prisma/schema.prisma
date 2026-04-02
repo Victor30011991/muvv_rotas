@@ -1,0 +1,370 @@
+// ================================================
+// MUVV ROTAS — Schema do Banco de Dados v2
+// PostgreSQL + Prisma ORM
+//
+// MUDANÇAS v2:
+// - Float → Decimal em todos os campos financeiros
+// - Tabela IdempotencyKey para retry seguro
+// - Tabela FinancialEvent para auditoria completa
+// - @@unique([reference, type]) em WalletTransaction
+// ================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  DRIVER
+  SHIPPER
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+enum VehicleType {
+  MOTO
+  CARGA_LEVE
+  VAN
+  CAMINHAO_MEDIO
+  CAMINHAO_GRANDE
+}
+
+enum FreightStatus {
+  PENDING
+  MATCHED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  DISPUTED
+}
+
+enum PaymentMethod {
+  PIX
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  phone     String     @unique
+  cpf       String?    @unique
+  password  String
+  role      UserRole
+  status    UserStatus @default(PENDING)
+  avatarUrl String?
+  city      String     @default("Parnaíba")
+  state     String     @default("PI")
+
+  driverProfile     DriverProfile?
+  freightsAsShipper Freight[]          @relation("ShipperFreights")
+  freightsAsDriver  Freight[]          @relation("DriverFreights")
+  reviewsGiven      Review[]           @relation("ReviewsGiven")
+  reviewsReceived   Review[]           @relation("ReviewsReceived")
+  messagesSent      ChatMessage[]      @relation("MessagesSent")
+  wallet            Wallet?
+  refreshTokens     RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model DriverProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cnhNumber   String?
+  cnhExpiry   DateTime?
+  cnhCategory String?
+  rating      Float   @default(0)
+  totalTrips  Int     @default(0)
+  loyaltyBadge String?
+  isAvailable Boolean @default(false)
+  pixKey      String?
+  pixKeyType  String?
+
+  lastLatitude  Float?
+  lastLongitude Float?
+  lastSeenAt    DateTime?
+
+  vehicle Vehicle?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("driver_profiles")
+}
+
+model Vehicle {
+  id              String        @id @default(uuid())
+  driverProfileId String        @unique
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+
+  type       VehicleType
+  brand      String
+  model      String
+  year       Int
+  plate      String  @unique
+  color      String?
+  capacityKg Int?
+  bodyType   String?
+  isVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vehicles")
+}
+
+model VehiclePricing {
+  id          String      @id @default(uuid())
+  vehicleType VehicleType @unique
+
+  // Decimal: precisão financeira, sem erro de ponto flutuante
+  baseRate   Decimal @db.Decimal(10, 2)
+  ratePerKm  Decimal @db.Decimal(10, 2)
+  minPrice   Decimal @db.Decimal(10, 2)
+  helperRate Decimal @db.Decimal(10, 2)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vehicle_pricing")
+}
+
+model Freight {
+  id String @id @default(uuid())
+
+  shipperId String
+  shipper   User   @relation("ShipperFreights", fields: [shipperId], references: [id])
+  driverId  String?
+  driver    User?  @relation("DriverFreights", fields: [driverId], references: [id])
+
+  title       String
+  description String?
+  vehicleType VehicleType
+
+  originAddress   String
+  originLat       Float
+  originLng       Float
+  originReference String?
+  destAddress     String
+  destLat         Float
+  destLng         Float
+  destReference   String?
+
+  // DECIMAL: valores financeiros imutáveis após criação
+  distanceKm     Float?
+  basePrice      Decimal  @db.Decimal(10, 2)
+  helperIncluded Boolean  @default(false)
+  helperPrice    Decimal  @default(0) @db.Decimal(10, 2)
+  totalPrice     Decimal  @db.Decimal(10, 2)
+  platformFee    Decimal  @db.Decimal(10, 2)
+  driverReceives Decimal  @db.Decimal(10, 2)
+
+  extras          FreightExtra[]
+  status          FreightStatus @default(PENDING)
+  paymentMethod   PaymentMethod @default(PIX)
+  payment         Payment?
+  trackingEvents  TrackingEvent[]
+  review          Review?
+  messages        ChatMessage[]
+  deliveryPhotoUrl String?
+
+  scheduledFor DateTime?
+  acceptedAt   DateTime?
+  startedAt    DateTime?
+  deliveredAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("freights")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  freightId String
+  freight   Freight  @relation(fields: [freightId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("MessagesSent", fields: [senderId], references: [id])
+  content   String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("chat_messages")
+}
+
+model FreightExtra {
+  id        String  @id @default(uuid())
+  freightId String
+  freight   Freight @relation(fields: [freightId], references: [id], onDelete: Cascade)
+  name      String
+  price     Decimal @db.Decimal(10, 2)
+
+  @@map("freight_extras")
+}
+
+model TrackingEvent {
+  id        String  @id @default(uuid())
+  freightId String
+  freight   Freight @relation(fields: [freightId], references: [id], onDelete: Cascade)
+  lat       Float
+  lng       Float
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@map("tracking_events")
+}
+
+model Payment {
+  id        String  @id @default(uuid())
+  freightId String  @unique
+  freight   Freight @relation(fields: [freightId], references: [id])
+
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
+  amount    Decimal @db.Decimal(10, 2)
+
+  pixKey    String?
+  pixQrCode String?
+  pixTxId   String?
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payments")
+}
+
+model Review {
+  id        String  @id @default(uuid())
+  freightId String  @unique
+  freight   Freight @relation(fields: [freightId], references: [id])
+
+  reviewerId String
+  reviewer   User   @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewedId String
+  reviewed   User   @relation("ReviewsReceived", fields: [reviewedId], references: [id])
+
+  rating  Int
+  comment String?
+  createdAt DateTime @default(now())
+
+  @@map("reviews")
+}
+
+// ================================================
+// TABELA: Carteira financeira do motorista
+// Decimal para precisão absoluta
+// ================================================
+model Wallet {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  balance        Decimal @default(0) @db.Decimal(12, 2)
+  totalEarned    Decimal @default(0) @db.Decimal(12, 2)
+  totalWithdrawn Decimal @default(0) @db.Decimal(12, 2)
+
+  transactions WalletTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wallets")
+}
+
+// ================================================
+// TABELA: Transações financeiras
+// @@unique([reference, type]) — proteção anti-duplicidade
+// ================================================
+model WalletTransaction {
+  id       String @id @default(uuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type      String          // credit | debit | withdrawal | adjustment
+  amount    Decimal         @db.Decimal(10, 2)
+  balance   Decimal         @db.Decimal(12, 2)  // saldo pós-operação
+  reference String?         // freteId ou outro contexto
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  // Proteção final contra duplicidade no banco.
+  // Um freteId só pode gerar um 'credit'.
+  @@unique([reference, type])
+
+  @@map("wallet_transactions")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// ================================================
+// TABELA: Idempotency Keys
+// Garante que retries não duplicam operações.
+// TTL: 24h (limpar via cron ou migration futura)
+// ================================================
+model IdempotencyKey {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  endpoint   String
+  statusCode Int
+  response   Json
+  createdAt  DateTime @default(now())
+
+  // Índice para limpeza de registros expirados
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
+// ================================================
+// TABELA: Financial Events
+// Auditoria completa de todas as operações.
+// Base para debug avançado e futura fila de eventos.
+// ================================================
+model FinancialEvent {
+  id        String   @id @default(uuid())
+  type      String   // DELIVERY_COMPLETED | DELIVERY_FAILED | DUPLICATE_BLOCKED | etc.
+  payload   Json     // dados completos do evento
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("financial_events")
+}
