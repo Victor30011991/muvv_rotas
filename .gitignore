@@ -43,3 +43,9 @@ apps/backend/prisma/migrations/*.sql.bak
 # Expo / Mobile
 apps/mobile/.expo/
 apps/mobile/node_modules/
+
+# Env files
+.env
+apps/backend/.env
+apps/web/.env
+apps/mobile/.env
